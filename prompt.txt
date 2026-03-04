@@ -1,0 +1,323 @@
+You are a senior full-stack software engineer and DevOps engineer.
+
+Your task is to create a **minimal but production-quality prototype** of an **AI Technology News Search Agent system**.
+
+IMPORTANT CONSTRAINT:
+
+The entire project MUST run inside a **Docker development environment**.
+
+Never install any dependencies on the host machine.
+
+All dependencies must be installed inside Docker containers.
+
+The project must run with:
+
+docker compose up
+
+and be accessible at:
+
+http://localhost:8000
+
+---
+
+# Goal
+
+Create a web application where a user can use an AI agent to search for the latest AI-related technical news and research papers.
+
+The system must support **two types of search**:
+
+1. Automatic search for latest AI news
+2. User-driven search using keywords or descriptions
+
+Both types of search must use the same AI agent pipeline.
+
+---
+
+# Tech Stack
+
+Backend
+
+Python 3.11
+FastAPI
+
+Frontend
+
+HTML templates
+HTMX (minimal JavaScript)
+
+AI Integration
+
+OpenAI API
+
+Search Sources
+
+arXiv API
+Hacker News API
+RSS feeds from AI blogs
+
+Storage
+
+SQLite
+
+---
+
+# Functional Requirements
+
+The web interface must contain:
+
+Header
+
+AI Technology News Agent
+
+---
+
+## Feature 1 — Automatic Search
+
+A button:
+
+Fetch Latest AI News
+
+When clicked:
+
+Trigger an agent that searches recent AI-related content.
+
+Sources:
+
+arXiv
+Hacker News
+AI blog RSS feeds
+
+Queries used for automatic search:
+
+AI
+large language model
+AI agent
+
+The agent must:
+
+1. retrieve articles
+2. summarize them using LLM
+3. store them in SQLite
+4. display them on the webpage
+
+---
+
+## Feature 2 — Keyword / Description Search
+
+The webpage must also contain a search box.
+
+Input field:
+
+"Enter keywords or a description"
+
+Example inputs:
+
+"AI agents for software engineering"
+
+"latest open source LLM models"
+
+"RAG architecture"
+
+Button:
+
+Search
+
+When submitted:
+
+Trigger the agent to perform a **targeted search** based on the user input.
+
+The agent must:
+
+1. use the user input as the search query
+2. retrieve relevant articles from arXiv, Hacker News, and RSS feeds
+3. summarize results using the LLM
+4. store them in SQLite
+5. display them in the UI
+
+---
+
+# Agent Architecture
+
+Implement a class:
+
+AIResearchAgent
+
+Responsibilities:
+
+search_sources(query)
+
+Search external sources using the query.
+
+If query is None:
+
+use default automatic queries.
+
+summarize_article()
+
+Use OpenAI API to summarize content.
+
+save_article()
+
+Save article metadata and summary to SQLite.
+
+run(query=None)
+
+Main orchestration function.
+
+---
+
+# API Endpoints
+
+GET /
+
+Return the main webpage.
+
+POST /fetch-news
+
+Trigger automatic search.
+
+POST /search
+
+Trigger keyword/description search.
+
+Input:
+
+query
+
+GET /articles
+
+Return stored articles as JSON.
+
+---
+
+# UI Requirements
+
+The homepage must contain:
+
+Title
+
+AI Technology News Agent
+
+Section 1
+
+Button:
+
+Fetch Latest AI News
+
+---
+
+Section 2
+
+Search box:
+
+Enter keywords or a description
+
+Search button
+
+---
+
+Section 3
+
+Results display
+
+Display article cards containing:
+
+Title
+Summary
+Source link
+
+---
+
+# Project Structure
+
+project_root/
+
+Dockerfile
+docker-compose.yml
+requirements.txt
+README.md
+
+app/
+
+main.py
+agent.py
+search_sources.py
+database.py
+models.py
+
+templates/
+
+index.html
+
+static/
+
+---
+
+# Docker Requirements
+
+Provide a Dockerfile that:
+
+Uses python:3.11-slim
+Installs Python dependencies
+Runs the FastAPI server using uvicorn
+
+Provide docker-compose.yml that:
+
+Builds the container
+Maps port 8000
+Mounts project directory as a volume
+
+---
+
+# Code Quality
+
+Requirements:
+
+Clear modular design
+Well commented code
+Easy to extend to multi-agent architecture
+
+Avoid unnecessary frameworks.
+
+---
+
+# Future Architecture
+
+Design the system so it can later support:
+
+Research Agent
+Topic Clustering Agent
+Blog Writing Agent
+
+Currently implement only the Research Agent.
+
+---
+
+# README
+
+Provide a README that explains:
+
+1. Project description
+2. How to run using docker compose
+3. How to use the two search features
+
+Example usage:
+
+Click "Fetch Latest AI News"
+
+or
+
+Enter a keyword query and click Search.
+
+---
+
+# Output
+
+Generate ALL project files.
+
+For each file:
+
+Show the filename and then the code.
+
+Ensure the project is fully runnable.
+

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="AI Technology News Agent — search, summarize, and generate blog articles." />
+    <title>AI Technology News Agent</title>
+
+    <!-- Google Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet" />
+
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="/static/style.css" />
+</head>
+
+<body>
+    <!-- ===== Header ===== -->
+    <header class="header">
+        <div class="header__glow"></div>
+        <h1 class="header__title">
+            <span class="header__icon">🤖</span>
+            AI Technology News Agent
+        </h1>
+        <p class="header__subtitle">Search, summarize &amp; generate professional blog articles</p>
+    </header>
+
+    <main class="container">
+
+        <!-- ===== Section 1 — Automatic Search ===== -->
+        <section class="card action-card">
+            <h2 class="card__heading">🔄 Automatic Search</h2>
+            <p class="card__desc">
+                Fetch the latest news from arXiv, Hacker News, and AI blogs.
+            </p>
+            <button class="btn btn--primary" hx-post="/fetch-news" hx-target="#results" hx-indicator="#loading"
+                hx-swap="innerHTML" hx-on:htmx:before-request="document.getElementById('status-message').innerHTML=''">
+                Fetch Latest AI News
+            </button>
+        </section>
+
+        <!-- ===== Section 2 — Keyword Search ===== -->
+        <section class="card action-card">
+            <h2 class="card__heading">🔍 Keyword / Description Search</h2>
+            <p class="card__desc">
+                Enter keywords or a description to find targeted AI content.
+            </p>
+            <form class="search-form" hx-post="/search" hx-target="#results" hx-indicator="#loading" hx-swap="innerHTML"
+                hx-on:htmx:before-request="document.getElementById('status-message').innerHTML=''">
+                <input type="text" name="query" class="search-form__input"
+                    placeholder="e.g. RAG architecture, AI agents" required />
+                <button type="submit" class="btn btn--accent">Search</button>
+            </form>
+        </section>
+
+        <!-- ===== Loading Indicator ===== -->
+        <div id="loading" class="loading-indicator">
+            <div class="spinner"></div>
+            <span>Searching sources &amp; generating summaries…</span>
+        </div>
+
+        <!-- ===== Blog Generation Status ===== -->
+        <div id="status-message"></div>
+
+        <!-- ===== Section 3 — Results (Selectable List) ===== -->
+        <form hx-post="/generate-blog" hx-target="#status-message" hx-indicator="#loading-blog"
+            hx-on:htmx:before-request="document.getElementById('status-message').innerHTML='<div class=\'alert alert--info\'>正在生成文章，請稍候...</div>'">
+            <section id="results" class="results">
+                {% if articles %}
+                <table class="result-list">
+                    {% for article in articles %}
+                    <tr class="result-row">
+                        <td>
+                            <input type="checkbox" name="article_ids" value="{{ article.id }}"
+                                class="result-row__checkbox">
+                        </td>
+                        <td class="result-row__date">
+                            {{ article.created_at.strftime('%Y-%m-%d') }}
+                        </td>
+                        <td>
+                            <div class="result-row__content">
+                                <div class="result-row__title">
+                                    <a href="{{ article.url }}" target="_blank" rel="noopener">{{ article.title }}</a>
+                                    <span class="result-card__source"
+                                        style="margin-left: 0.5rem; transform: scale(0.8);">{{ article.source }}</span>
+                                </div>
+                                <div class="result-row__summary">
+                                    {{ article.summary }}
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </table>
+                {% else %}
+                <div class="empty-state">
+                    <span class="empty-state__icon">📡</span>
+                    <p>No articles yet. Click <strong>Fetch Latest AI News</strong> or use the search box above.</p>
+                </div>
+                {% endif %}
+            </section>
+
+            <div class="action-bar">
+                <div id="loading-blog" class="loading-indicator" style="margin-right: 1.5rem; padding: 0;">
+                    <div class="spinner" style="width: 24px; height: 24px;"></div>
+                </div>
+                <button type="submit" class="btn btn--primary" style="padding: 0.8rem 2.5rem; font-size: 1.1rem;">
+                    🚀 研究並生成文章
+                </button>
+            </div>
+        </form>
+    </main>
+
+    <!-- ===== Footer ===== -->
+    <footer class="footer">
+        <p>AI Technology News Agent &middot; Powered by arXiv, Hacker News &amp; RSS feeds</p>
+    </footer>
+</body>
+
+</html>

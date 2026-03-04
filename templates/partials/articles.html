@@ -1,0 +1,31 @@
+{# HTMX partial — rendered into #results via hx-swap #}
+{% if articles %}
+    <table class="result-list">
+        {% for article in articles %}
+        <tr class="result-row">
+            <td>
+                <input type="checkbox" name="article_ids" value="{{ article.id }}" class="result-row__checkbox">
+            </td>
+            <td class="result-row__date">
+                {{ article.created_at.strftime('%Y-%m-%d') }}
+            </td>
+            <td>
+                <div class="result-row__content">
+                    <div class="result-row__title">
+                        <a href="{{ article.url }}" target="_blank" rel="noopener">{{ article.title }}</a>
+                        <span class="result-card__source" style="margin-left: 0.5rem; transform: scale(0.8);">{{ article.source }}</span>
+                    </div>
+                    <div class="result-row__summary">
+                        {{ article.summary }}
+                    </div>
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+{% else %}
+    <div class="empty-state">
+        <span class="empty-state__icon">🤷</span>
+        <p>No articles found for this query. Try different keywords.</p>
+    </div>
+{% endif %}
