@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 # arXiv API
 # ---------------------------------------------------------------------------
 
-ARXIV_API_URL = "http://export.arxiv.org/api/query"
+ARXIV_API_URL = "https://export.arxiv.org/api/query"
 
 # Rate-limit: arXiv asks for at least 3 seconds between requests.
 _last_arxiv_call: float = 0.0

@@ -21,6 +21,7 @@ import google.generativeai as genai
 import nltk
 from openai import OpenAI
 from anthropic import Anthropic
+from groq import Groq
 from sumy.parsers.plaintext import PlaintextParser
 from sumy.nlp.tokenizers import Tokenizer
 from sumy.summarizers.text_rank import TextRankSummarizer
@@ -64,6 +65,10 @@ class AIResearchAgent:
         anthropic_key = os.getenv("ANTHROPIC_API_KEY", "")
         self._anthropic_client = Anthropic(api_key=anthropic_key) if anthropic_key else None
         
+        # Groq setup
+        groq_key = os.getenv("GROQ_API_KEY", "")
+        self._groq_client = Groq(api_key=groq_key) if groq_key else None
+        
         # Simple lock to ensure sequential LLM requests if multiple generation calls occur
         self._llm_lock = asyncio.Lock()
 
@@ -102,7 +107,7 @@ class AIResearchAgent:
         """
         articles = get_articles_by_ids(article_ids)
         if not articles:
-            return "Error: No articles found for the given IDs."
+            return {"status": "error", "message": "No articles found for the given IDs.", "prompt": ""}
 
         # Prepare context
         context = "\n\n".join([
@@ -125,19 +130,26 @@ class AIResearchAgent:
             "5. Write in Traditional Chinese (繁體中文)."
         )
 
+        # Prepare paths early for error logging
+        today_str = datetime.now().strftime("%Y-%m-%d")
+        base_dir = Path("/app/blog_article") / today_str
+        timestamp = int(datetime.now().timestamp())
+        prompt_filename = f"blog_{model_provider}_{timestamp}_prompt.txt"
+        prompt_path = base_dir / prompt_filename
+
         async with self._llm_lock:
             try:
                 content = ""
                 if model_provider == "gemini":
                     if not self._gemini_model:
-                        return "Error: GOOGLE_API_KEY not set."
+                        return {"status": "error", "message": "GOOGLE_API_KEY not set.", "prompt": prompt}
                     loop = asyncio.get_event_loop()
                     response = await loop.run_in_executor(None, lambda: self._gemini_model.generate_content(prompt))
                     content = response.text
                 
                 elif model_provider == "openai":
                     if not self._openai_client:
-                        return "Error: OPENAI_API_KEY not set."
+                        return {"status": "error", "message": "OPENAI_API_KEY not set.", "prompt": prompt}
                     loop = asyncio.get_event_loop()
                     response = await loop.run_in_executor(None, lambda: self._openai_client.chat.completions.create(
                         model="gpt-4o",
@@ -147,7 +159,7 @@ class AIResearchAgent:
                 
                 elif model_provider == "claude":
                     if not self._anthropic_client:
-                        return "Error: ANTHROPIC_API_KEY not set."
+                        return {"status": "error", "message": "ANTHROPIC_API_KEY not set.", "prompt": prompt}
                     loop = asyncio.get_event_loop()
                     response = await loop.run_in_executor(None, lambda: self._anthropic_client.messages.create(
                         model="claude-3-5-sonnet-20241022",
@@ -156,20 +168,23 @@ class AIResearchAgent:
                     ))
                     content = response.content[0].text
                 
-                else:
-                    return f"Error: Unknown model provider '{model_provider}'"
-
-                # Directory logic
-                today_str = datetime.now().strftime("%Y-%m-%d")
-                base_dir = Path("/app/blog_article") / today_str
-                base_dir.mkdir(parents=True, exist_ok=True)
-
-                timestamp = int(datetime.now().timestamp())
-                filename = f"blog_{model_provider}_{timestamp}.md"
-                prompt_filename = f"blog_{model_provider}_{timestamp}_prompt.txt"
+                elif model_provider == "groq":
+                    if not self._groq_client:
+                        return {"status": "error", "message": "GROQ_API_KEY not set.", "prompt": prompt}
+                    loop = asyncio.get_event_loop()
+                    response = await loop.run_in_executor(None, lambda: self._groq_client.chat.completions.create(
+                        model="llama-3.3-70b-versatile",
+                        messages=[{"role": "user", "content": prompt}]
+                    ))
+                    content = response.choices[0].message.content
                 
+                else:
+                    return {"status": "error", "message": f"Unknown model provider '{model_provider}'", "prompt": prompt}
+
+                # Directory logic for success
+                base_dir.mkdir(parents=True, exist_ok=True)
+                filename = f"blog_{model_provider}_{timestamp}.md"
                 file_path = base_dir / filename
-                prompt_path = base_dir / prompt_filename
                 
                 # Save the generated content
                 with open(file_path, "w", encoding="utf-8") as f:
@@ -180,11 +195,31 @@ class AIResearchAgent:
                     f.write(prompt)
 
                 logger.info("Generated blog article saved to %s (and prompt to %s)", file_path, prompt_path)
-                return str(file_path)
+                return {"status": "success", "file_path": str(file_path)}
 
             except Exception as exc:
                 logger.error("Failed to generate blog article: %s", exc)
-                return f"Error during generation: {str(exc)}"
+                
+                # Create directory and log error/prompt for troubleshooting
+                try:
+                    base_dir.mkdir(parents=True, exist_ok=True)
+                    error_filename = f"blog_{model_provider}_{timestamp}_error.txt"
+                    error_path = base_dir / error_filename
+                    
+                    with open(prompt_path, "w", encoding="utf-8") as f:
+                        f.write(prompt)
+                    with open(error_path, "w", encoding="utf-8") as f:
+                        f.write(str(exc))
+                    
+                    logger.info("Error and prompt logged to %s and %s", error_path, prompt_path)
+                except Exception as log_exc:
+                    logger.error("Failed to log error to disk: %s", log_exc)
+
+                return {
+                    "status": "error",
+                    "message": str(exc),
+                    "prompt": prompt
+                }
 
     # ------------------------------------------------------------------
     # Step 1: Search

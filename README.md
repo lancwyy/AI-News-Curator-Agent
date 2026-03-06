@@ -8,7 +8,7 @@ An AI-powered web application that searches, summarizes, and generates professio
 - **Keyword Search** — Enter any keywords or description to find targeted content
 - **Multi-Source** — Aggregates results from arXiv (with rate limiting), Hacker News, and AI blog RSS feeds
 - **Local Summarization** — Fast, cost-effective summaries using **TextRank** (no LLM calls during search)
-- **Selectable Blog Generation** — Research and synthesize a professional blog post from selected articles using your choice of **Gemini**, **OpenAI (GPT-4o)**, or **Claude (3.5 Sonnet)**
+- **Selectable Blog Generation** — Research and synthesize a professional blog post from selected articles using your choice of **Gemini**, **OpenAI (GPT-4o)**, **Claude (3.5 Sonnet)**, or **Groq (Llama-3)**
 - **Persistent Storage** — All results are stored in SQLite for later retrieval
 - **DB Admin UI** — Built-in `sqlite-web` interface for database management
 
@@ -18,7 +18,7 @@ An AI-powered web application that searches, summarizes, and generates professio
 |-----------|-----------------------------------------|
 | Backend   | Python 3.11, FastAPI                    |
 | Frontend  | HTML + HTMX (minimal JS)               |
-| AI (Gen)  | Gemini, GPT-4o, Claude 3.5              |
+| AI (Gen)  | Gemini, GPT-4o, Claude 3.5, Groq (Llama-3) |
 | AI (Sum)  | TextRank (Local via `sumy`)             |
 | Sources   | arXiv API, HN Algolia, RSS             |
 | Storage   | SQLite                                  |
@@ -41,9 +41,10 @@ Create a `.env` file in the project root with at least one provider key:
 # Required for Gemini
 GOOGLE_API_KEY=your_gemini_api_key_here
 
-# Optional: Required for OpenAI/Claude features
+# Optional: Required for OpenAI/Claude/Groq features
 OPENAI_API_KEY=your_openai_api_key_here
 ANTHROPIC_API_KEY=your_anthropic_api_key_here
+GROQ_API_KEY=your_groq_api_key_here
 ```
 
 > **Note**: Summaries always use local TextRank to save cost. LLM keys are only used when you click the "Generate Article" button.

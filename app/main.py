@@ -102,9 +102,19 @@ async def list_articles():
 async def generate_blog(request: Request, article_ids: List[int] = Form(...), llm_model: str = Form("gemini")):
     """Generate a blog article from selected research articles."""
     agent = AIResearchAgent()
-    file_path = await agent.generate_blog_article(article_ids, model_provider=llm_model)
+    result = await agent.generate_blog_article(article_ids, model_provider=llm_model)
     
-    if "Error" in file_path:
-        return f"<div class='alert alert--danger'>{file_path}</div>"
+    if result["status"] == "error":
+        error_html = f"""
+        <div class='alert alert--danger'>
+            <strong>無法生成文章</strong><br><br>
+            <strong>提示詞如下：</strong><br>
+            <pre style='white-space: pre-wrap; background: #f8d7da; padding: 10px; border-radius: 4px;'>{result['prompt']}</pre><br>
+            <strong>錯誤訊息如下：</strong><br>
+            <code>{result['message']}</code>
+        </div>
+        """
+        return error_html
     
+    file_path = result["file_path"]
     return f"<div class='alert alert--success'>文章已生成：{file_path}</div>"
