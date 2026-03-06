@@ -29,20 +29,34 @@
             AI Technology News Agent
         </h1>
         <p class="header__subtitle">Search, summarize &amp; generate professional blog articles</p>
+        <a href="/admin" class="nav-btn">⚙️ 管理背景</a>
     </header>
 
     <main class="container">
+        <!-- Automatic Search Section -->
+        <section class="card">
+            <h2 class="card__heading">✨ 自動獲取最新 AI 新聞</h2>
+            <p class="card__desc">快速從 arXiv, Hacker News 及各個 AI 官方 Blog 獲取今日熱門資訊。</p>
 
-        <!-- ===== Section 1 — Automatic Search ===== -->
-        <section class="card action-card">
-            <h2 class="card__heading">🔄 Automatic Search</h2>
-            <p class="card__desc">
-                Fetch the latest news from arXiv, Hacker News, and AI blogs.
-            </p>
-            <button class="btn btn--primary" hx-post="/fetch-news" hx-target="#results" hx-indicator="#loading"
-                hx-swap="innerHTML" hx-on:htmx:before-request="document.getElementById('status-message').innerHTML=''">
-                Fetch Latest AI News
-            </button>
+            <form hx-post="/fetch-news" hx-target="#results" hx-indicator="#loading" hx-swap="innerHTML"
+                hx-on:htmx:before-request="document.getElementById('status-message').innerHTML=''">
+                <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 200px;">
+                        <label for="days_back"
+                            style="font-size: 0.85rem; color: var(--text-secondary); display: block; margin-bottom: 0.4rem;">時間範圍</label>
+                        <select name="days_back" id="days_back" class="search-form__input" style="width: 100%;">
+                            <option value="0">今天 (Today)</option>
+                            <option value="3">最近 3 天</option>
+                            <option value="7">最近 7 天</option>
+                            <option value="30">最近 30 天</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn--accent"
+                        style="flex: 1.5; min-width: 200px; margin-top: auto;">
+                        🚀 立即獲取
+                    </button>
+                </div>
+            </form>
         </section>
 
         <!-- ===== Section 2 — Keyword Search ===== -->
@@ -110,10 +124,11 @@
                 <div id="loading-blog" class="loading-indicator" style="margin-right: 1.5rem; padding: 0;">
                     <div class="spinner" style="width: 24px; height: 24px;"></div>
                 </div>
-                
+
                 <div class="llm-selector" style="margin-right: 1rem; display: flex; align-items: center; gap: 0.5rem;">
                     <label for="llm_model" style="font-weight: 500; color: var(--text-muted);">使用大模型：</label>
-                    <select name="llm_model" id="llm_model" class="search-form__input" style="width: auto; padding: 0.5rem 1rem; height: 44px; margin: 0;">
+                    <select name="llm_model" id="llm_model" class="search-form__input"
+                        style="width: auto; padding: 0.5rem 1rem; height: 44px; margin: 0;">
                         <option value="gemini">Gemini (Default)</option>
                         <option value="openai">OpenAI (GPT-4o)</option>
                         <option value="claude">Claude (Claude-3.5)</option>

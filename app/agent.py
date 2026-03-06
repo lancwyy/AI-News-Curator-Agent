@@ -26,7 +26,7 @@ from sumy.parsers.plaintext import PlaintextParser
 from sumy.nlp.tokenizers import Tokenizer
 from sumy.summarizers.text_rank import TextRankSummarizer
 
-from app.database import save_article, get_articles_by_ids
+from app.database import save_article, get_articles_by_ids, get_setting
 from app.models import Article, RawArticle
 from app.search_sources import search_all_sources
 
@@ -49,36 +49,42 @@ class AIResearchAgent:
     """
 
     def __init__(self) -> None:
-        # Gemini setup
-        gemini_key = os.getenv("GOOGLE_API_KEY", "")
-        if gemini_key:
-            genai.configure(api_key=gemini_key)
-            self._gemini_model = genai.GenerativeModel("gemini-2.0-flash")
-        else:
-            self._gemini_model = None
-
-        # OpenAI setup
-        openai_key = os.getenv("OPENAI_API_KEY", "")
-        self._openai_client = OpenAI(api_key=openai_key) if openai_key else None
-
-        # Anthropic setup
-        anthropic_key = os.getenv("ANTHROPIC_API_KEY", "")
-        self._anthropic_client = Anthropic(api_key=anthropic_key) if anthropic_key else None
-        
-        # Groq setup
-        groq_key = os.getenv("GROQ_API_KEY", "")
-        self._groq_client = Groq(api_key=groq_key) if groq_key else None
-        
         # Simple lock to ensure sequential LLM requests if multiple generation calls occur
         self._llm_lock = asyncio.Lock()
+
+    def _get_api_key(self, provider_key: str, env_var: str) -> str:
+        """Fetch key from DB first, then fallback to environment."""
+        db_key = get_setting(provider_key)
+        if db_key:
+            return db_key
+        return os.getenv(env_var, "")
+
+    def _get_gemini_model(self):
+        gemini_key = self._get_api_key("GOOGLE_API_KEY", "GOOGLE_API_KEY")
+        if gemini_key:
+            genai.configure(api_key=gemini_key)
+            return genai.GenerativeModel("gemini-2.0-flash")
+        return None
+
+    def _get_openai_client(self):
+        openai_key = self._get_api_key("OPENAI_API_KEY", "OPENAI_API_KEY")
+        return OpenAI(api_key=openai_key) if openai_key else None
+
+    def _get_anthropic_client(self):
+        anthropic_key = self._get_api_key("ANTHROPIC_API_KEY", "ANTHROPIC_API_KEY")
+        return Anthropic(api_key=anthropic_key) if anthropic_key else None
+
+    def _get_groq_client(self):
+        groq_key = self._get_api_key("GROQ_API_KEY", "GROQ_API_KEY")
+        return Groq(api_key=groq_key) if groq_key else None
 
     # ------------------------------------------------------------------
     # Public interface
     # ------------------------------------------------------------------
 
-    async def run(self, query: Optional[str] = None) -> List[Article]:
+    async def run(self, query: Optional[str] = None, days_back: Optional[int] = None) -> List[Article]:
         """Main orchestration: search → summarize (Local TextRank) → save → return."""
-        raw_articles = await self.search_sources(query)
+        raw_articles = await self.search_sources(query, days_back=days_back)
 
         processed: List[Article] = []
         for raw in raw_articles:
@@ -94,9 +100,10 @@ class AIResearchAgent:
             processed.append(saved)
 
         logger.info(
-            "Agent run complete — %d articles processed (query=%s)",
+            "Agent run complete — %d articles processed (query=%s, days_back=%s)",
             len(processed),
             query,
+            days_back,
         )
         return processed
 
@@ -141,27 +148,30 @@ class AIResearchAgent:
             try:
                 content = ""
                 if model_provider == "gemini":
-                    if not self._gemini_model:
+                    gemini_model = self._get_gemini_model()
+                    if not gemini_model:
                         return {"status": "error", "message": "GOOGLE_API_KEY not set.", "prompt": prompt}
                     loop = asyncio.get_event_loop()
-                    response = await loop.run_in_executor(None, lambda: self._gemini_model.generate_content(prompt))
+                    response = await loop.run_in_executor(None, lambda: gemini_model.generate_content(prompt))
                     content = response.text
                 
                 elif model_provider == "openai":
-                    if not self._openai_client:
+                    openai_client = self._get_openai_client()
+                    if not openai_client:
                         return {"status": "error", "message": "OPENAI_API_KEY not set.", "prompt": prompt}
                     loop = asyncio.get_event_loop()
-                    response = await loop.run_in_executor(None, lambda: self._openai_client.chat.completions.create(
+                    response = await loop.run_in_executor(None, lambda: openai_client.chat.completions.create(
                         model="gpt-4o",
                         messages=[{"role": "user", "content": prompt}]
                     ))
                     content = response.choices[0].message.content
                 
                 elif model_provider == "claude":
-                    if not self._anthropic_client:
+                    anthropic_client = self._get_anthropic_client()
+                    if not anthropic_client:
                         return {"status": "error", "message": "ANTHROPIC_API_KEY not set.", "prompt": prompt}
                     loop = asyncio.get_event_loop()
-                    response = await loop.run_in_executor(None, lambda: self._anthropic_client.messages.create(
+                    response = await loop.run_in_executor(None, lambda: anthropic_client.messages.create(
                         model="claude-3-5-sonnet-20241022",
                         max_tokens=4096,
                         messages=[{"role": "user", "content": prompt}]
@@ -169,10 +179,11 @@ class AIResearchAgent:
                     content = response.content[0].text
                 
                 elif model_provider == "groq":
-                    if not self._groq_client:
+                    groq_client = self._get_groq_client()
+                    if not groq_client:
                         return {"status": "error", "message": "GROQ_API_KEY not set.", "prompt": prompt}
                     loop = asyncio.get_event_loop()
-                    response = await loop.run_in_executor(None, lambda: self._groq_client.chat.completions.create(
+                    response = await loop.run_in_executor(None, lambda: groq_client.chat.completions.create(
                         model="llama-3.3-70b-versatile",
                         messages=[{"role": "user", "content": prompt}]
                     ))
@@ -226,19 +237,32 @@ class AIResearchAgent:
     # ------------------------------------------------------------------
 
     async def search_sources(
-        self, query: Optional[str] = None
+        self, query: Optional[str] = None, days_back: Optional[int] = None
     ) -> List[RawArticle]:
         """
-        Retrieve articles from all configured sources.
+        Retrieve articles from all configured sources and filter by date if requested.
         """
         queries = [query] if query else DEFAULT_QUERIES
         all_articles: List[RawArticle] = []
         seen_urls: set[str] = set()
 
+        # Calculate cutoff date if days_back is provided
+        cutoff_date = None
+        if days_back is not None:
+            from datetime import timedelta
+            # Using UTC to match model's Field(default_factory=datetime.utcnow)
+            cutoff_date = datetime.utcnow() - timedelta(days=days_back)
+            logger.info("Filtering articles published after %s (%d days back)", cutoff_date, days_back)
+
         for q in queries:
-            results = await search_all_sources(q, max_per_source=5)
+            results = await search_all_sources(q, max_per_source=10 if query else 5)
             for article in results:
                 if article.url not in seen_urls:
+                    # Apply date filter
+                    if cutoff_date and article.published_at:
+                        if article.published_at < cutoff_date:
+                            continue
+                    
                     seen_urls.add(article.url)
                     all_articles.append(article)
 

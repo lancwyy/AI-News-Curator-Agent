@@ -20,6 +20,7 @@ class RawArticle(BaseModel):
     url: str
     content: str = ""          # full text or abstract
     source: str = ""           # e.g. "arxiv", "hackernews", "rss"
+    published_at: Optional[datetime] = None
 
 
 class Article(BaseModel):

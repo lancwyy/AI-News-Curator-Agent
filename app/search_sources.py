@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from datetime import datetime
 from typing import List
 from urllib.parse import quote_plus
 
@@ -59,12 +60,18 @@ async def search_arxiv(query: str, max_results: int = 5) -> List[RawArticle]:
 
         feed = feedparser.parse(resp.text)
         for entry in feed.entries:
+            # Extract published date
+            published_at = None
+            if "published_parsed" in entry:
+                published_at = datetime.fromtimestamp(time.mktime(entry.published_parsed))
+
             articles.append(
                 RawArticle(
                     title=entry.get("title", "").strip().replace("\n", " "),
                     url=entry.get("link", ""),
                     content=entry.get("summary", "").strip(),
                     source="arxiv",
+                    published_at=published_at,
                 )
             )
     except Exception as exc:
@@ -101,12 +108,18 @@ async def search_hackernews(query: str, max_results: int = 5) -> List[RawArticle
             url = hit.get("url") or f"https://news.ycombinator.com/item?id={hit.get('objectID', '')}"
             # Use the story text if available, otherwise fall back to title
             content = hit.get("story_text") or hit.get("title", "")
+            
+            published_at = None
+            if "created_at_i" in hit:
+                published_at = datetime.fromtimestamp(hit["created_at_i"])
+
             articles.append(
                 RawArticle(
                     title=title,
                     url=url,
                     content=content,
                     source="hackernews",
+                    published_at=published_at,
                 )
             )
     except Exception as exc:
@@ -147,12 +160,19 @@ async def search_rss_feeds(
                     summary = entry.get("summary", "")
                     # Simple keyword matching — keeps things lightweight
                     if query_lower in title.lower() or query_lower in summary.lower():
+                        published_at = None
+                        if "published_parsed" in entry:
+                            published_at = datetime.fromtimestamp(time.mktime(entry.published_parsed))
+                        elif "updated_parsed" in entry:
+                            published_at = datetime.fromtimestamp(time.mktime(entry.updated_parsed))
+
                         articles.append(
                             RawArticle(
                                 title=title.strip(),
                                 url=entry.get("link", ""),
                                 content=summary.strip(),
                                 source="rss",
+                                published_at=published_at,
                             )
                         )
                         if len(articles) >= max_results:

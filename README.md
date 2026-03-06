@@ -10,6 +10,7 @@ An AI-powered web application that searches, summarizes, and generates professio
 - **Local Summarization** — Fast, cost-effective summaries using **TextRank** (no LLM calls during search)
 - **Selectable Blog Generation** — Research and synthesize a professional blog post from selected articles using your choice of **Gemini**, **OpenAI (GPT-4o)**, **Claude (3.5 Sonnet)**, or **Groq (Llama-3)**
 - **Persistent Storage** — All results are stored in SQLite for later retrieval
+- **Management Dashboard** — New admin interface to configure API keys, manage search history by date, and delete generated blog/error files
 - **DB Admin UI** — Built-in `sqlite-web` interface for database management
 
 ## Tech Stack
@@ -71,6 +72,13 @@ The Database Admin UI will be available at **http://localhost:8080**.
 2. **Tick the checkboxes** next to the articles you want to research.
 3. Click the **🚀 研究並生成文章** button in the bottom action bar.
 4. The generated Markdown article will be saved to `blog_article/YYYY-MM-DD/`.
+
+### Management & Administration
+
+1. Click the **⚙️ 管理背景** link in the top-right corner of the homepage.
+2. **API Settings**: Update your API keys directly via the UI. These settings are saved in the database and override `.env` values.
+3. **Search History**: View and delete old search results grouped by date.
+4. **Blog Articles**: Browse and delete generated blog posts and error logs locally.
 
 ## API Endpoints
 

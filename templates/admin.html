@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Management Dashboard - AI News Agent</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet" />
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <link rel="stylesheet" href="/static/style.css" />
+    <style>
+        .tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1rem;
+            font-weight: 600;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .tab-btn.active {
+            color: var(--accent-color);
+            border-bottom: 2px solid var(--accent-color);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .admin-section {
+            margin-bottom: 3rem;
+        }
+
+        .settings-grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr auto;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .history-list {
+            margin-top: 1rem;
+        }
+
+        .history-date-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            background: var(--card-bg);
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+        }
+
+        .item-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .item-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .item-row:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+
+<body>
+    <header class="header">
+        <div class="header__glow"></div>
+        <h1 class="header__title">
+            <a href="/" style="text-decoration: none; color: inherit;">
+                <span class="header__icon">⚙️</span>
+                Management Dashboard
+            </a>
+        </h1>
+        <p class="header__subtitle">Configure models & manage data history</p>
+        <a href="/" class="nav-btn">🏠 回到首頁</a>
+    </header>
+
+    <main class="container">
+        <div class="tabs">
+            <button class="tab-btn active" onclick="openTab(event, 'settings')">API Settings</button>
+            <button class="tab-btn" onclick="openTab(event, 'history')">Search History</button>
+            <button class="tab-btn" onclick="openTab(event, 'blogs')">Blog Articles</button>
+        </div>
+
+        <!-- Settings Tab -->
+        <div id="settings" class="tab-content active">
+            <section class="card">
+                <h2 class="card__heading">🔑 LLM API Keys</h2>
+                <p class="card__desc">Configure API keys for different providers. These will take precedence over .env
+                    variables.</p>
+
+                <form hx-post="/admin/settings" hx-target="#settings-status">
+                    <div style="display: flex; flex-direction: column; gap: 1.5rem; margin-top: 1.5rem;">
+                        <div class="form-group">
+                            <label for="google_key">Google Gemini API Key</label>
+                            <input type="password" name="google_key" id="google_key" class="search-form__input"
+                                value="{{ settings.GOOGLE_API_KEY }}" placeholder="AIza...">
+                        </div>
+                        <div class="form-group">
+                            <label for="openai_key">OpenAI API Key</label>
+                            <input type="password" name="openai_key" id="openai_key" class="search-form__input"
+                                value="{{ settings.OPENAI_API_KEY }}" placeholder="sk-...">
+                        </div>
+                        <div class="form-group">
+                            <label for="anthropic_key">Anthropic (Claude) API Key</label>
+                            <input type="password" name="anthropic_key" id="anthropic_key" class="search-form__input"
+                                value="{{ settings.ANTHROPIC_API_KEY }}" placeholder="sk-ant-...">
+                        </div>
+                        <div class="form-group">
+                            <label for="groq_key">Groq API Key</label>
+                            <input type="password" name="groq_key" id="groq_key" class="search-form__input"
+                                value="{{ settings.GROQ_API_KEY }}" placeholder="gsk_...">
+                        </div>
+
+                        <div id="settings-status"></div>
+
+                        <button type="submit" class="btn btn--primary"
+                            style="width: auto; align-self: flex-start;">儲存設定</button>
+                    </div>
+                </form>
+            </section>
+        </div>
+
+        <!-- History Tab -->
+        <div id="history" class="tab-content">
+            <section class="card">
+                <h2 class="card__heading">📅 Search History</h2>
+                <p class="card__desc">Manage articles stored in the database by date.</p>
+
+                <div class="history-list">
+                    {% for date in dates %}
+                    <div class="history-date-group" style="margin-bottom: 1rem;">
+                        <div class="history-date-row" onclick="toggleDate('{{ date }}')">
+                            <span style="font-weight: 600;">{{ date }}</span>
+                            <span class="btn btn--accent btn--small" hx-get="/admin/articles/date/{{ date }}"
+                                hx-target="#articles-{{ date }}" hx-swap="innerHTML"
+                                onclick="event.stopPropagation(); toggleDate('{{ date }}', true)">檢視紀錄</span>
+                        </div>
+                        <div id="articles-{{ date }}"
+                            style="display: none; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 0 0 8px 8px; margin-top: -8px;">
+                            <!-- Loaded via HTMX -->
+                        </div>
+                    </div>
+                    {% endfor %}
+
+                    {% if not dates %}
+                    <p style="color: var(--text-muted); text-align: center; padding: 2rem;">尚無收錄任何文章。</p>
+                    {% endif %}
+                </div>
+            </section>
+        </div>
+
+        <!-- Blogs Tab -->
+        <div id="blogs" class="tab-content">
+            <section class="card">
+                <h2 class="card__heading">📝 Generated Blogs & Logs</h2>
+                <p class="card__desc">Manage generated Markdown files and error logs.</p>
+
+                <div class="history-list">
+                    {% for date, files in blogs.items() %}
+                    <div class="history-date-group" style="margin-bottom: 1rem;">
+                        <div class="history-date-row" onclick="toggleDate('blog-{{ date }}')">
+                            <span style="font-weight: 600;">{{ date }}</span>
+                            <span style="color: var(--text-muted);">{{ files|length }} 個檔案</span>
+                        </div>
+                        <div id="articles-blog-{{ date }}"
+                            style="display: none; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 0 0 8px 8px; margin-top: -8px;">
+                            <div style="margin-bottom: 1rem; display: flex; gap: 1rem; align-items: center;">
+                                <label><input type="checkbox" onclick="toggleAll('blog-{{ date }}', this.checked)">
+                                    全選</label>
+                                <button class="btn btn--danger btn--small" hx-post="/admin/blogs/bulk-delete"
+                                    hx-include=".chk-blog-{{ date }}" hx-vals='{"date_str": "{{ date }}"}'
+                                    hx-target="#articles-blog-{{ date }}" hx-confirm="確定要刪除選中的檔案嗎？">刪除選中項</button>
+                            </div>
+                            <ul class="item-list">
+                                {% for file in files %}
+                                <li class="item-row" id="file-{{ date }}-{{ loop.index }}">
+                                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                        <input type="checkbox" name="file_ptrs" value="{{ date }}/{{ file }}"
+                                            class="chk-blog-{{ date }}">
+                                        <span style="font-family: monospace; font-size: 0.9rem;">{{ file }}</span>
+                                    </div>
+                                    <button class="btn btn--danger btn--small"
+                                        hx-delete="/admin/blogs/{{ date }}/{{ file }}"
+                                        hx-target="#file-{{ date }}-{{ loop.index }}" hx-swap="outerHTML"
+                                        hx-confirm="確定要刪除此檔案嗎？">刪除</button>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                    {% endfor %}
+
+                    {% if not blogs %}
+                    <p style="color: var(--text-muted); text-align: center; padding: 2rem;">目前沒有已生成的文章或日誌。</p>
+                    {% endif %}
+                </div>
+            </section>
+        </div>
+
+        <div style="margin-top: 2rem; text-align: center;">
+            <a href="/" class="btn btn--secondary">⬅️ 回到首頁</a>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <p>AI Technology News Agent &middot; Admin Dashboard</p>
+    </footer>
+
+    <script>
+        function openTab(evt, tabName) {
+            var i, tabcontent, tablinks;
+            tabcontent = document.getElementsByClassName("tab-content");
+            for (i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].classList.remove("active");
+            }
+            tablinks = document.getElementsByClassName("tab-btn");
+            for (i = 0; i < tablinks.length; i++) {
+                tablinks[i].classList.remove("active");
+            }
+            document.getElementById(tabName).classList.add("active");
+            evt.currentTarget.classList.add("active");
+        }
+
+        function toggleDate(date, forceShow) {
+            var content = document.getElementById("articles-" + date);
+            if (!content) return;
+
+            if (forceShow || content.style.display === "none" || content.style.display === "") {
+                content.style.display = "block";
+            } else {
+                content.style.display = "none";
+            }
+        }
+
+        function toggleAll(group, checked) {
+            var checkboxes = document.querySelectorAll('.chk-' + group);
+            checkboxes.forEach(function (chk) {
+                chk.checked = checked;
+            });
+        }
+    </script>
+</body>
+
+</html>

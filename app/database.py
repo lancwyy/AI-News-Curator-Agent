@@ -42,6 +42,14 @@ def init_db() -> None:
         )
         """
     )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS settings (
+            key   TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+        )
+        """
+    )
     conn.commit()
     conn.close()
 
@@ -116,3 +124,78 @@ def get_articles_by_ids(ids: List[int]) -> List[Article]:
             )
         )
     return articles
+
+
+def delete_article(article_id: int) -> None:
+    """Delete an article from the database."""
+    conn = _get_connection()
+    conn.execute("DELETE FROM articles WHERE id = ?", (article_id,))
+    conn.commit()
+    conn.close()
+
+
+def delete_articles_bulk(article_ids: List[int]) -> None:
+    """Delete multiple articles from the database."""
+    if not article_ids:
+        return
+    conn = _get_connection()
+    placeholders = ",".join(["?"] * len(article_ids))
+    conn.execute(f"DELETE FROM articles WHERE id IN ({placeholders})", article_ids)
+    conn.commit()
+    conn.close()
+
+
+def get_unique_article_dates() -> List[str]:
+    """Return a list of unique dates (YYYY-MM-DD) where articles exist."""
+    conn = _get_connection()
+    # Subtracting the time part from created_at
+    rows = conn.execute(
+        "SELECT DISTINCT date(created_at) as article_date FROM articles ORDER BY article_date DESC"
+    ).fetchall()
+    conn.close()
+    return [row["article_date"] for row in rows]
+
+
+def get_articles_by_date(date_str: str) -> List[Article]:
+    """Return all articles created on a specific date."""
+    conn = _get_connection()
+    rows = conn.execute(
+        "SELECT * FROM articles WHERE date(created_at) = ? ORDER BY id DESC", (date_str,)
+    ).fetchall()
+    conn.close()
+
+    articles: List[Article] = []
+    for row in rows:
+        articles.append(
+            Article(
+                id=row["id"],
+                title=row["title"],
+                summary=row["summary"],
+                url=row["url"],
+                source=row["source"],
+                created_at=datetime.fromisoformat(row["created_at"]),
+            )
+        )
+    return articles
+
+
+# ---------------------------------------------------------------------------
+# Settings Helpers
+# ---------------------------------------------------------------------------
+
+def get_setting(key: str, default: str = "") -> str:
+    """Retrieve a setting value from the database."""
+    conn = _get_connection()
+    row = conn.execute("SELECT value FROM settings WHERE key = ?", (key,)).fetchone()
+    conn.close()
+    return row["value"] if row else default
+
+
+def set_setting(key: str, value: str) -> None:
+    """Set a setting value in the database (upsert)."""
+    conn = _get_connection()
+    conn.execute(
+        "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", (key, value)
+    )
+    conn.commit()
+    conn.close()
