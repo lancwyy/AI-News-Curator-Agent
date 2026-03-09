@@ -25,7 +25,10 @@ from app.database import (
     get_articles_by_date, 
     delete_article, 
     get_setting, 
-    set_setting
+    set_setting,
+    get_fetch_queries,
+    add_fetch_query,
+    delete_fetch_query
 )
 
 # ---------------------------------------------------------------------------
@@ -156,13 +159,17 @@ async def admin_page(request: Request):
                 if files:
                     blog_structure[date_dir.name] = sorted(files, reverse=True)
 
+    # Fetch managed keywords
+    queries = get_fetch_queries()
+
     return templates.TemplateResponse(
         "admin.html",
         {
             "request": request, 
             "settings": settings, 
             "dates": dates,
-            "blogs": blog_structure
+            "blogs": blog_structure,
+            "queries": queries
         },
     )
 
@@ -293,3 +300,34 @@ async def admin_delete_blog(date_str: str, filename: str):
         file_path.unlink()
         return ""  # HTMX swaps out the list item
     return HTMLResponse("File not found", status_code=404)
+
+
+# ---------------------------------------------------------------------------
+# admin keyword routes
+# ---------------------------------------------------------------------------
+
+@app.post("/admin/queries", response_class=HTMLResponse)
+async def admin_add_query(request: Request, query: str = Form(...)):
+    """Add a new fetch keyword and return the updated row."""
+    if not query.strip():
+        return ""
+    new_id = add_fetch_query(query.strip())
+    
+    # Return a single row to be appended or re-rendered
+    return f"""
+    <li class='item-row' id='query-{new_id}'>
+        <span style='font-weight: 500;'>{query.strip()}</span>
+        <button class='btn btn--danger btn--small' 
+                hx-delete='/admin/queries/{new_id}' 
+                hx-target='#query-{new_id}' 
+                hx-swap='outerHTML'
+                hx-confirm='確定要刪除此關鍵字嗎？'>刪除</button>
+    </li>
+    """
+
+
+@app.delete("/admin/queries/{query_id}", response_class=HTMLResponse)
+async def admin_delete_query(query_id: int):
+    """Delete a fetch keyword."""
+    delete_fetch_query(query_id)
+    return ""

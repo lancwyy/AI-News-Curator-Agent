@@ -26,14 +26,14 @@ from sumy.parsers.plaintext import PlaintextParser
 from sumy.nlp.tokenizers import Tokenizer
 from sumy.summarizers.text_rank import TextRankSummarizer
 
-from app.database import save_article, get_articles_by_ids, get_setting
+from app.database import save_article, get_articles_by_ids, get_setting, get_fetch_queries
 from app.models import Article, RawArticle
 from app.search_sources import search_all_sources
 
 logger = logging.getLogger(__name__)
 
-# Default queries used for the "automatic search" feature.
-DEFAULT_QUERIES = ["AI", "large language model", "AI agent"]
+# Default keywords are now managed in the database via fetch_queries table.
+# See search_sources() for usage.
 
 # Ensure NLTK data is available for sumy
 try:
@@ -243,7 +243,18 @@ class AIResearchAgent:
         """
         Retrieve articles from all configured sources and filter by date range if requested.
         """
-        queries = [query] if query else DEFAULT_QUERIES
+        if query:
+            queries = [query]
+        else:
+            # Fetch managed keywords from database
+            db_queries = get_fetch_queries()
+            queries = [q["query"] for q in db_queries]
+            
+            # Fallback if somehow empty
+            if not queries:
+                logger.warning("No fetch queries found in database, using fallback 'AI'")
+                queries = ["AI"]
+
         all_articles: List[RawArticle] = []
         seen_urls: set[str] = set()
 

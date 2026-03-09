@@ -50,6 +50,20 @@ def init_db() -> None:
         )
         """
     )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS fetch_queries (
+            id    INTEGER PRIMARY KEY AUTOINCREMENT,
+            query TEXT NOT NULL
+        )
+        """
+    )
+    # Seed default queries if empty
+    cursor = conn.execute("SELECT COUNT(*) FROM fetch_queries")
+    if cursor.fetchone()[0] == 0:
+        default_queries = ["AI", "large language model", "AI agent"]
+        for q in default_queries:
+            conn.execute("INSERT INTO fetch_queries (query) VALUES (?)", (q,))
     conn.commit()
     conn.close()
 
@@ -197,5 +211,35 @@ def set_setting(key: str, value: str) -> None:
     conn.execute(
         "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", (key, value)
     )
+    conn.commit()
+    conn.close()
+
+
+# ---------------------------------------------------------------------------
+# Fetch Queries Helpers
+# ---------------------------------------------------------------------------
+
+def get_fetch_queries() -> List[dict]:
+    """Return the list of managed keywords for fetching news."""
+    conn = _get_connection()
+    rows = conn.execute("SELECT * FROM fetch_queries ORDER BY id ASC").fetchall()
+    conn.close()
+    return [{"id": row["id"], "query": row["query"]} for row in rows]
+
+
+def add_fetch_query(query: str) -> int:
+    """Add a new keyword to the fetch list."""
+    conn = _get_connection()
+    cursor = conn.execute("INSERT INTO fetch_queries (query) VALUES (?)", (query,))
+    new_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return new_id
+
+
+def delete_fetch_query(query_id: int) -> None:
+    """Delete a keyword from the fetch list."""
+    conn = _get_connection()
+    conn.execute("DELETE FROM fetch_queries WHERE id = ?", (query_id,))
     conn.commit()
     conn.close()

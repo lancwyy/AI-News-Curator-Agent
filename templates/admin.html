@@ -105,6 +105,7 @@
     <main class="container">
         <div class="tabs">
             <button class="tab-btn active" onclick="openTab(event, 'settings')">API Settings</button>
+            <button class="tab-btn" onclick="openTab(event, 'keywords')">Fetch Keywords</button>
             <button class="tab-btn" onclick="openTab(event, 'history')">Search History</button>
             <button class="tab-btn" onclick="openTab(event, 'blogs')">Blog Articles</button>
         </div>
@@ -149,6 +150,33 @@
         </div>
 
         <!-- History Tab -->
+        <!-- Keywords Tab -->
+        <div id="keywords" class="tab-content">
+            <section class="card">
+                <h2 class="card__heading">🔍 Fetch News Keywords</h2>
+                <p class="card__desc">Manage the keywords used for automatic news fetching.</p>
+
+                <form hx-post="/admin/queries" hx-target="#query-list" hx-swap="beforeend"
+                    hx-on:htmx:after-request="this.reset()" style="margin-bottom: 2rem;">
+                    <div style="display: flex; gap: 0.75rem;">
+                        <input type="text" name="query" class="search-form__input" style="flex: 1;"
+                            placeholder="輸入新的關鍵字..." required>
+                        <button type="submit" class="btn btn--primary">新增</button>
+                    </div>
+                </form>
+
+                <ul id="query-list" class="item-list">
+                    {% for q in queries %}
+                    <li class="item-row" id="query-{{ q.id }}">
+                        <span style="font-weight: 500;">{{ q.query }}</span>
+                        <button class="btn btn--danger btn--small" hx-delete="/admin/queries/{{ q.id }}"
+                            hx-target="#query-{{ q.id }}" hx-swap="outerHTML" hx-confirm="確定要刪除此關鍵字嗎？">刪除</button>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </section>
+        </div>
+
         <div id="history" class="tab-content">
             <section class="card">
                 <h2 class="card__heading">📅 Search History</h2>
