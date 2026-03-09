@@ -82,9 +82,9 @@ class AIResearchAgent:
     # Public interface
     # ------------------------------------------------------------------
 
-    async def run(self, query: Optional[str] = None, days_back: Optional[int] = None) -> List[Article]:
+    async def run(self, query: Optional[str] = None, start_date: Optional[str] = None, end_date: Optional[str] = None) -> List[Article]:
         """Main orchestration: search → summarize (Local TextRank) → save → return."""
-        raw_articles = await self.search_sources(query, days_back=days_back)
+        raw_articles = await self.search_sources(query, start_date=start_date, end_date=end_date)
 
         processed: List[Article] = []
         for raw in raw_articles:
@@ -100,10 +100,11 @@ class AIResearchAgent:
             processed.append(saved)
 
         logger.info(
-            "Agent run complete — %d articles processed (query=%s, days_back=%s)",
+            "Agent run complete — %d articles processed (query=%s, range=%s to %s)",
             len(processed),
             query,
-            days_back,
+            start_date,
+            end_date,
         )
         return processed
 
@@ -237,30 +238,44 @@ class AIResearchAgent:
     # ------------------------------------------------------------------
 
     async def search_sources(
-        self, query: Optional[str] = None, days_back: Optional[int] = None
+        self, query: Optional[str] = None, start_date: Optional[str] = None, end_date: Optional[str] = None
     ) -> List[RawArticle]:
         """
-        Retrieve articles from all configured sources and filter by date if requested.
+        Retrieve articles from all configured sources and filter by date range if requested.
         """
         queries = [query] if query else DEFAULT_QUERIES
         all_articles: List[RawArticle] = []
         seen_urls: set[str] = set()
 
-        # Calculate cutoff date if days_back is provided
-        cutoff_date = None
-        if days_back is not None:
-            from datetime import timedelta
-            # Using UTC to match model's Field(default_factory=datetime.utcnow)
-            cutoff_date = datetime.utcnow() - timedelta(days=days_back)
-            logger.info("Filtering articles published after %s (%d days back)", cutoff_date, days_back)
+        # Parse date range if provided
+        start_dt = None
+        end_dt = None
+        if start_date:
+            try:
+                # Assuming "YYYY-MM-DD" from form
+                start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+            except ValueError:
+                logger.warning("Invalid start_date format: %s", start_date)
+        
+        if end_date:
+            try:
+                # Set to end of day
+                end_dt = datetime.strptime(end_date, "%Y-%m-%d").replace(hour=23, minute=59, second=59)
+            except ValueError:
+                logger.warning("Invalid end_date format: %s", end_date)
+
+        if start_dt or end_dt:
+            logger.info("Filtering articles by range: %s to %s", start_dt, end_dt)
 
         for q in queries:
             results = await search_all_sources(q, max_per_source=10 if query else 5)
             for article in results:
                 if article.url not in seen_urls:
                     # Apply date filter
-                    if cutoff_date and article.published_at:
-                        if article.published_at < cutoff_date:
+                    if article.published_at:
+                        if start_dt and article.published_at < start_dt:
+                            continue
+                        if end_dt and article.published_at > end_dt:
                             continue
                     
                     seen_urls.add(article.url)

@@ -41,21 +41,27 @@
             <form hx-post="/fetch-news" hx-target="#results" hx-indicator="#loading" hx-swap="innerHTML"
                 hx-on:htmx:before-request="document.getElementById('status-message').innerHTML=''">
                 <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
-                    <div style="flex: 1; min-width: 200px;">
-                        <label for="days_back"
-                            style="font-size: 0.85rem; color: var(--text-secondary); display: block; margin-bottom: 0.4rem;">時間範圍</label>
-                        <select name="days_back" id="days_back" class="search-form__input" style="width: 100%;">
-                            <option value="0">今天 (Today)</option>
-                            <option value="3">最近 3 天</option>
-                            <option value="7">最近 7 天</option>
-                            <option value="30">最近 30 天</option>
-                        </select>
+                    <div style="flex: 1; min-width: 150px;">
+                        <label for="start_date"
+                            style="font-size: 0.85rem; color: var(--text-secondary); display: block; margin-bottom: 0.4rem;">開始日期</label>
+                        <input type="date" name="start_date" id="start_date" class="search-form__input" style="width: 100%;">
+                    </div>
+                    <div style="flex: 1; min-width: 150px;">
+                        <label for="end_date"
+                            style="font-size: 0.85rem; color: var(--text-secondary); display: block; margin-bottom: 0.4rem;">結束日期</label>
+                        <input type="date" name="end_date" id="end_date" class="search-form__input" style="width: 100%;">
                     </div>
                     <button type="submit" class="btn btn--accent"
-                        style="flex: 1.5; min-width: 200px; margin-top: auto;">
+                        style="flex: 1; min-width: 150px; margin-top: auto;">
                         🚀 立即獲取
                     </button>
                 </div>
+                <script>
+                    // Set default dates to today
+                    const today = new Date().toISOString().split('T')[0];
+                    document.getElementById('start_date').value = today;
+                    document.getElementById('end_date').value = today;
+                </script>
             </form>
         </section>
 

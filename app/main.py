@@ -80,10 +80,10 @@ async def homepage(request: Request):
 
 
 @app.post("/fetch-news", response_class=HTMLResponse)
-async def fetch_news(request: Request, days_back: int = Form(0)):
-    """Trigger automatic search using default AI queries with date filtering."""
+async def fetch_news(request: Request, start_date: str = Form(None), end_date: str = Form(None)):
+    """Trigger automatic search using default AI queries with date range filtering."""
     agent = AIResearchAgent()
-    articles = await agent.run(query=None, days_back=days_back)
+    articles = await agent.run(query=None, start_date=start_date, end_date=end_date)
     return templates.TemplateResponse(
         "partials/articles.html",
         {"request": request, "articles": articles},
