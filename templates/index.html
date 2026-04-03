@@ -107,7 +107,7 @@
                             <div class="result-row__content">
                                 <div class="result-row__title">
                                     <a href="{{ article.url }}" target="_blank" rel="noopener">{{ article.title }}</a>
-                                    <span class="result-card__source"
+                                    <span class="result-card__source" data-source="{{ article.source }}"
                                         style="margin-left: 0.5rem; transform: scale(0.8);">{{ article.source }}</span>
                                 </div>
                                 <div class="result-row__summary">
@@ -151,7 +151,7 @@
 
     <!-- ===== Footer ===== -->
     <footer class="footer">
-        <p>AI Technology News Agent &middot; Powered by arXiv, Hacker News &amp; RSS feeds</p>
+        <p>AI Technology News Agent &middot; Powered by arXiv, Hacker News &amp; 14 Tech/AI RSS Feeds</p>
     </footer>
 </body>
 

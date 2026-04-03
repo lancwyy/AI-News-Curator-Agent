@@ -129,15 +129,28 @@ async def search_hackernews(query: str, max_results: int = 5) -> List[RawArticle
 
 
 # ---------------------------------------------------------------------------
-# RSS Feeds (AI blogs)
+# RSS Feeds (AI & Tech blogs)
 # ---------------------------------------------------------------------------
 
-# Curated list of AI-related RSS feeds.
+# Curated list of AI-related and major tech RSS feeds.
 AI_RSS_FEEDS = [
-    "https://openai.com/news/rss.xml",
-    "https://deepmind.google/blog/rss.xml",
-    "https://blog.google/rss/",
-    "https://techcrunch.com/feed/",
+    # --- AI Labs & Companies ---
+    "https://openai.com/news/rss.xml",              # OpenAI
+    "https://deepmind.google/blog/rss.xml",          # Google DeepMind
+    "https://blog.google/rss/",                      # Google Blog
+    # --- Major Tech Media ---
+    "https://techcrunch.com/feed/",                   # TechCrunch
+    "https://www.wired.com/feed/rss",                 # Wired
+    "https://feeds.arstechnica.com/arstechnica/index", # Ars Technica
+    "https://www.theverge.com/rss/index.xml",         # The Verge
+    "https://venturebeat.com/feed/",                  # VentureBeat
+    "https://www.technologyreview.com/feed/",         # MIT Technology Review
+    "https://www.zdnet.com/topic/artificial-intelligence/rss.xml",  # ZDNet AI
+    # --- AI-Focused Publications ---
+    "https://www.artificialintelligence-news.com/feed/",  # AI News
+    "https://machinelearningmastery.com/feed/",       # Machine Learning Mastery
+    "https://www.marktechpost.com/feed/",             # MarkTechPost
+    "https://syncedreview.com/feed/",                 # Synced (AI research)
 ]
 
 
@@ -154,6 +167,8 @@ async def search_rss_feeds(
                 resp = await client.get(feed_url)
                 resp.raise_for_status()
                 feed = feedparser.parse(resp.text)
+                
+                matched_in_feed = 0
 
                 for entry in feed.entries:
                     title = entry.get("title", "")
@@ -175,12 +190,18 @@ async def search_rss_feeds(
                                 published_at=published_at,
                             )
                         )
-                        if len(articles) >= max_results:
-                            return articles
+                        matched_in_feed += 1
+                        
+                        if matched_in_feed >= max_results:
+                            logger.info("RSS feed '%s' returned %d matches (reached per-feed max of %d)", feed_url, matched_in_feed, max_results)
+                            break
+                
+                if matched_in_feed < max_results:
+                    logger.info("RSS feed '%s' returned %d matches for query '%s'", feed_url, matched_in_feed, query)
             except Exception as exc:
                 logger.warning("RSS fetch failed for %s: %s", feed_url, exc)
 
-    return articles[:max_results]
+    return articles
 
 
 # ---------------------------------------------------------------------------
@@ -196,8 +217,13 @@ async def search_all_sources(
 
     # Run searches concurrently-ish but keep error isolation
     arxiv_results = await search_arxiv(query, max_per_source)
+    logger.info("Search '%s': arXiv returned %d results", query, len(arxiv_results))
+    
     hn_results = await search_hackernews(query, max_per_source)
+    logger.info("Search '%s': HackerNews returned %d results", query, len(hn_results))
+    
     rss_results = await search_rss_feeds(query, max_per_source)
+    logger.info("Search '%s': RSS (14 feeds) returned %d results", query, len(rss_results))
 
     results.extend(arxiv_results)
     results.extend(hn_results)
@@ -211,4 +237,5 @@ async def search_all_sources(
             seen_urls.add(article.url)
             unique.append(article)
 
+    logger.info("Search '%s': Total %d unique results collected across all sources", query, len(unique))
     return unique

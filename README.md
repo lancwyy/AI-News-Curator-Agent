@@ -6,11 +6,11 @@ An AI-powered web application that searches, summarizes, and generates professio
 
 - **Automatic Search** — Fetch the latest AI news using managed keywords. Results can be filtered by a custom date range.
 - **Keyword Search** — Enter any keywords or description to find targeted content.
-- **Multi-Source** — Aggregates results from arXiv (with rate limiting), Hacker News, and AI blog RSS feeds.
+- **Multi-Source** — Aggregates results from arXiv (with rate limiting), Hacker News, and 14 major Tech/AI RSS feeds (OpenAI, DeepMind, TechCrunch, Wired, The Verge, etc).
 - **Local Summarization** — Fast, cost-effective summaries using **TextRank** (no LLM calls during search).
 - **Selectable Blog Generation** — Research and synthesize a professional blog post from selected articles using your choice of **Gemini**, **OpenAI (GPT-4o)**, **Claude (3.5 Sonnet)**, or **Groq (Llama-3)**.
 - **Persistent Storage** — All results are stored in SQLite for later retrieval.
-- **Management Dashboard** — New admin interface to configure API keys, manage fetch keywords, track search history by date, and delete generated blog/error files.
+- **Management Dashboard** — Admin interface to configure API keys, manage fetch keywords, track search history by date, and delete generated blog/error files.
 - **DB Admin UI** — Built-in `sqlite-web` interface for database management
 
 ## Tech Stack
@@ -21,7 +21,7 @@ An AI-powered web application that searches, summarizes, and generates professio
 | Frontend  | HTML + HTMX (minimal JS)               |
 | AI (Gen)  | Gemini, GPT-4o, Claude 3.5, Groq (Llama-3) |
 | AI (Sum)  | TextRank (Local via `sumy`)             |
-| Sources   | arXiv API, HN Algolia, RSS             |
+| Sources   | arXiv API, HN Algolia, 14 Tech/AI RSS Feeds |
 | Storage   | SQLite                                  |
 | Infra     | Docker, Docker Compose                  |
 
