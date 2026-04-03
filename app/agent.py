@@ -279,7 +279,10 @@ class AIResearchAgent:
             logger.info("Filtering articles by range: %s to %s", start_dt, end_dt)
 
         for q in queries:
-            results = await search_all_sources(q, max_per_source=10 if query else 5)
+            results = await search_all_sources(
+                q,
+                max_per_source=10 if query else 5,
+            )
             for article in results:
                 if article.url not in seen_urls:
                     # Apply date filter
